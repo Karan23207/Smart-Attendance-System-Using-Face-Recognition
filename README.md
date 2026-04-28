@@ -30,3 +30,23 @@ python app.py
 
 4. Open in browser:
 http://127.0.0.1:5000
+
+
+## 📷 Project Screenshots
+
+Below are real-time outputs of the system demonstrating functionality:
+
+### 🏠 Home Page
+![Home](images/home.png)
+
+### 📝 Register Face
+![Register](images/register.png)
+
+### ⚠️ Duplicate User Detection
+![Duplicate](images/duplicate.png)
+
+### ✅ Attendance Marked
+![Attendance](images/attendance_marked.png)
+
+### 📊 View Attendance
+![View](images/view_attendance.png)
