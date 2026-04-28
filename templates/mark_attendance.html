@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Attendance Status</title>
+
+    <!-- Auto Redirect after 4 sec -->
+    <meta http-equiv="refresh" content="4;url=/" />
+
+    <style>
+        body {
+            font-family: Arial;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-align: center;
+            padding-top: 100px;
+        }
+
+        .box {
+            background: white;
+            color: black;
+            padding: 40px;
+            border-radius: 10px;
+            width: 350px;
+            margin: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: orange; }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+
+{% if status == 'marked' %}
+    <h2 class="success">✅ Attendance Marked</h2>
+    <p>User ID: {{ id }}</p>
+
+{% elif status == 'already_marked' %}
+    <h2 class="info">⚠️ Already Marked</h2>
+    <p>User ID: {{ id }}</p>
+
+{% elif status == 'not marked' %}
+    <h2 class="error">❌ Face Not Recognized</h2>
+
+{% endif %}
+
+<p>Redirecting to home page...</p>
+
+</div>
+
+</body>
+</html>

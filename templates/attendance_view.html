@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>View Attendance</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: linear-gradient(135deg, #1d2671, #c33764);
+            color: white;
+            text-align: center;
+            padding-top: 50px;
+        }
+
+        .box {
+            background: white;
+            color: black;
+            padding: 20px;
+            border-radius: 10px;
+            width: 500px;
+            margin: auto;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        th {
+            background: #185a9d;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+
+    <h2>📊 Attendance Record</h2>
+
+    <form method="POST">
+        <input type="date" name="date" required>
+        <button type="submit">View</button>
+    </form>
+
+    {% if selected_date %}
+        <h3>Records for {{ selected_date }}</h3>
+
+        {% if records %}
+            <table>
+                <tr>
+                    <th>Username</th>
+                    <th>User ID</th>
+                    <th>Time</th>
+                </tr>
+
+                {% for row in records %}
+                <tr>
+                    <td>{{ row[0] }}</td>
+                    <td>{{ row[1] }}</td>
+                    <td>{{ row[2] }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p>No attendance found</p>
+        {% endif %}
+    {% endif %}
+
+</div>
+
+</body>
+</html>

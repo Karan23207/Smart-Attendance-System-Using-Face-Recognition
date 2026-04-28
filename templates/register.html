@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Register Face</title>
+
+    <!-- Auto redirect after 4 sec -->
+    {% if status %}
+    <meta http-equiv="refresh" content="4;url=/" />
+    {% endif %}
+
+    <style>
+        body {
+            font-family: Arial;
+            background: linear-gradient(135deg, #43cea2, #185a9d);
+            color: white;
+            text-align: center;
+            padding-top: 80px;
+        }
+
+        .box {
+            background: white;
+            color: black;
+            padding: 40px;
+            border-radius: 12px;
+            width: 350px;
+            margin: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            background: #185a9d;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0f3d6b;
+        }
+
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: orange; }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+
+    <h2>Register Face</h2>
+
+    <div class="info" style="margin-bottom: 15px;">
+    📸 After camera opens, press <b>'S'</b> to capture and save your face
+    </div>
+
+    <form action="/onlyregisterface" method="POST">
+        <input type="text" name="username" placeholder="Enter username" required>
+        <input type="text" name="id" placeholder="Enter ID" required>
+        <button type="submit">Register</button>
+    </form>
+
+    <br>
+
+    {% if status == 'new' %}
+        <h3 class="success">✅ Registered Successfully</h3>
+        <p>{{ username }}, you are now added!</p>
+
+    {% elif status == 'exists' %}
+        <h3 class="error">❌ Already Exists</h3>
+        <p>{{ username }}, this face is already registered</p>
+
+    {% elif status == 'same user' %}
+        <h3 class="info">⚠️ Same User</h3>
+        <p>{{ username }}, you already registered before</p>
+
+    {% elif status == 'duplicate face' %}
+        <h3 class="error">🚫 Duplicate Face</h3>
+        <p>This face is already linked with another ID</p>
+    {% elif status == 'no match found' %}
+        <p>no match found</p>
+
+    {% endif %}
+
+    {% if status %}
+        <p>Redirecting to home page...</p>
+    {% endif %}
+
+</div>
+
+</body>
+</html>
