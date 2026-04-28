@@ -1,1 +1,32 @@
 # Smart-Attendance-System-Using-Face-Recognition
+
+## 📌 Overview
+This project is a face recognition-based attendance system built using Python and Flask. It detects faces in real-time and automatically marks attendance.
+
+## 🚀 Features
+- Register new user faces
+- Mark attendance using face recognition
+- Prevent duplicate attendance
+- View attendance by date
+- Real-time webcam detection
+
+## 🛠️ Technologies Used
+- Python
+- Flask
+- OpenCV
+- NumPy
+- SQLite
+
+## ▶️ How to Run
+
+1. Clone the repository:
+git clone https://github.com/Karan23207/Smart-Attendance-System-Using-Face-Recognition.git
+
+2. Install dependencies:
+pip install -r requirements.txt
+
+3. Run the project:
+python app.py
+
+4. Open in browser:
+http://127.0.0.1:5000
