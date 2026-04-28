@@ -2,7 +2,6 @@ from flask import Flask
 import cv2
 from flask import request
 from flask import render_template
-# from newencode import signin_user
 from encode import onlyregisterface, mark_attendance
 from database import init_db
 from database import get_attendance_by_date
