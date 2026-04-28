@@ -1,5 +1,4 @@
 import cv2
-from flask import Flask
 import face_recognition
 import face_recognition_models
 import pickle
