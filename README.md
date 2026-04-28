@@ -17,19 +17,39 @@ This project is a face recognition-based attendance system built using Python an
 - NumPy
 - SQLite
 
-## ▶️ How to Run
 
-1. Clone the repository:
+## ▶️ How to Run the Project
+
+### 1. Clone the repository
 git clone https://github.com/Karan23207/Smart-Attendance-System-Using-Face-Recognition.git
 
-2. Install dependencies:
+### 2. Go to project folder
+cd Smart-Attendance-System-Using-Face-Recognition
+
+### 3. Create virtual environment (recommended)
+python -m venv .venv
+
+### 4. Activate virtual environment
+
+For Windows:
+.venv\Scripts\activate
+
+For Mac/Linux:
+source .venv/bin/activate
+
+### 5. Install dependencies
 pip install -r requirements.txt
 
-3. Run the project:
+### 6. Run the project
 python app.py
 
-4. Open in browser:
+### 7. Open in browser
 http://127.0.0.1:5000
+
+## ⚠️ Notes
+- Make sure your webcam is connected
+- Press 'S' to capture face while registering
+- Do not register the same user twice
 
 
 ## 📷 Project Screenshots
