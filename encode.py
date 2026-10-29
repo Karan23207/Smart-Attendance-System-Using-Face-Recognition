@@ -1,182 +1,208 @@
 import cv2
 import face_recognition
-import face_recognition_models
 import pickle
 import sqlite3
 import numpy as np
 import os
-from database import already_marked, mark_db_attendance , insert_user
 import time
+from cryptography.fernet import Fernet
+from dotenv import load_dotenv
+from database import already_marked, mark_db_attendance, insert_user
 
-filename = 'Storeface'
-filepath = os.listdir(filename)
-facelist = []
-idlist = []
-for path in filepath:
-    facelist.append(cv2.imread(os.path.join(filename, path)))
-    id = os.path.splitext(path)[0]
-    idlist.append(id)
-# print(idlist)
-
-# encoding part of every stored image after registring
-def findencodingfun(facelist):
-    encodelist = []
-    for img in facelist:
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        encode = face_recognition.face_encodings(img)[0]
-        encodelist.append(encode)
-
-    return encodelist
+load_dotenv()  # Loads variables from .env
 
 
-encodelistknown = findencodingfun(facelist)
-encodelistknownwithids = [encodelistknown, idlist]
+class FaceRecognitionSystem:
+    def __init__(self):
+        """Encapsulates the core configuration, encryption, and state."""
+        self.encryption_key = os.getenv("ENCRYPTION_KEY")
+        if not self.encryption_key:
+            raise ValueError("CRITICAL ERROR: ENCRYPTION_KEY not found in environment variables!")
 
-file = open('encodefile.pkl', 'wb')
-pickle.dump(encodelistknownwithids, file)
-file.close()
+        self.cipher_suite = Fernet(self.encryption_key.encode())
 
+        self.folder_path = 'Storeface'
+        self.encode_file_path = 'encodefile.pkl'
 
-def onlyregisterface(username, id):
-    cam = cv2.VideoCapture(0)
+        self.encodelistknown = []
+        self.idlist = []
 
-    start_time = time.time()
-    TIME_LIMIT = 20
+        # Automatically load or build encodings on initialization
+        self._initialize_encodings()
 
-    base_dir = os.getcwd()  # project root
-    folder_path = os.path.join(base_dir, "Storeface")
-
-    # create folder if not exists
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-
-    while True:
-        success, img = cam.read()
-
-        if not success:
-            break
-
-            # ⏱️ Check time limit
-        if time.time() - start_time > TIME_LIMIT:
-            print("Time limit reached")
-            break
-
-        cv2.imshow("Camera", img)
-
-        key = cv2.waitKey(1) & 0xFF
-
-        imgSmall = cv2.resize(img, (0, 0), None, 0.25, 0.25)
-        imgSmall = cv2.cvtColor(imgSmall, cv2.COLOR_BGR2RGB)
-
-        facecurrframe = face_recognition.face_locations(imgSmall)
-        encodeunknowncurrframe = face_recognition.face_encodings(imgSmall, facecurrframe)
-
-        for encodeface, faceloc in zip(encodeunknowncurrframe, facecurrframe):
-            matches = face_recognition.compare_faces(encodelistknown, encodeface)
-            facedis = face_recognition.face_distance(encodelistknown, encodeface)
-
-            if len(encodelistknown) > 0:
-                facedis = face_recognition.face_distance(encodelistknown, encodeface)
-                min_dist = np.min(facedis)
-                matchidx = np.argmin(facedis)
-
-                # 🚫 Same face already registered
-                if min_dist < 0.45:
-                    if idlist[matchidx] == id:
-                        print("Same user trying again")
-                        cam.release()
-                        cv2.destroyAllWindows()
-                        return "same user"
-
-                    else:
-                        print("Face already exists with different ID")
-                        cam.release()
-                        cv2.destroyAllWindows()
-                        return "duplicate face"
-
-
-        if key == ord('s'):
-            file_path = os.path.join(folder_path, f"{id}.png")
-            cv2.imwrite(file_path, img)
-            print("Saved at:", file_path)
-            # ✅ INSERT INTO DATABASE
+    def _initialize_encodings(self):
+        """Abstraction: Hides the complex loading, decryption, and fallback logic from the caller."""
+        if os.path.exists(self.encode_file_path):
             try:
-                insert_user(id, username)
-            except sqlite3.IntegrityError:
-                cam.release()
-                cv2.destroyAllWindows()
-                return "id_exists"  # optional case
-            cam.release()
-            cv2.destroyAllWindows()
-            return "new"
+                with open(self.encode_file_path, 'rb') as file:
+                    encrypted_data = file.read()
 
+                decrypted_data = self.cipher_suite.decrypt(encrypted_data)
+                self.encodelistknown, self.idlist = pickle.loads(decrypted_data)
+                print("Successfully loaded and decrypted known face encodings from cache.")
+                return
+            except Exception as e:
+                print(f"Error decrypting cache: {e}. Falling back to image folder.")
 
-        if key == ord('q'):
-            break
+        # Fallback: Build from folder images if cache doesn't exist or failed
+        if os.path.exists(self.folder_path):
+            filepath = os.listdir(self.folder_path)
+        else:
+            filepath = []
 
-    cam.release()
-    cv2.destroyAllWindows()
-    return "no match found"
+        facelist = []
+        for path in filepath:
+            img_path = os.path.join(self.folder_path, path)
+            img = cv2.imread(img_path)
+            if img is not None:
+                facelist.append(img)
+                self.idlist.append(os.path.splitext(path)[0])
 
+        self.encodelistknown = self._generate_encodings(facelist)
 
-### signin + fetch record(face) from databse to match  !!!
-def mark_attendance():
+        # Encrypt and save cache
+        data_to_save = [self.encodelistknown, self.idlist]
+        serialized_data = pickle.dumps(data_to_save)
+        encrypted_data = self.cipher_suite.encrypt(serialized_data)
+        with open(self.encode_file_path, 'wb') as file:
+            file.write(encrypted_data)
 
-    cam = cv2.VideoCapture(0)
-    start_time = time.time()
-    TIME_LIMIT = 20
+    def _generate_encodings(self, facelist):
+        """Private helper method for vector extraction."""
+        encodelist = []
+        valid_ids = []
 
-    while True:
-        success, img = cam.read()
+        for img, user_id in zip(facelist, self.idlist):
+            if img is None:
+                continue
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            encodings = face_recognition.face_encodings(img)
 
-        if not success:
-            break
+            if len(encodings) > 0:
+                encodelist.append(encodings[0])
+                valid_ids.append(user_id)
 
-            # ⏱️ Check time limit
-        if time.time() - start_time > TIME_LIMIT:
-            cam.release()
-            cv2.destroyAllWindows()
-            return "not marked", None
+        self.idlist = valid_ids
+        return encodelist
 
-        cv2.imshow("Camera", img)
+    def only_register_face(self, username, user_id):
+        """Public method to handle user registration securely."""
+        cam = cv2.VideoCapture(0)
+        cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-        key = cv2.waitKey(1) & 0xFF
+        start_time = time.time()
+        TIME_LIMIT = 20
 
-        imgSmall = cv2.resize(img, (0, 0), None, 0.25, 0.25)
-        imgSmall = cv2.cvtColor(imgSmall, cv2.COLOR_BGR2RGB)
+        if not os.path.exists(self.folder_path):
+            os.makedirs(self.folder_path)
 
-        facecurrframe = face_recognition.face_locations(imgSmall)
-        encodeunknowncurrframe = face_recognition.face_encodings(imgSmall, facecurrframe)
+        frame_count = 0
 
-        found_match = False  # ✅ flag
-        for encodeface, faceloc in zip(encodeunknowncurrframe, facecurrframe):
-            matches = face_recognition.compare_faces(encodelistknown, encodeface)
-            facedis = face_recognition.face_distance(encodelistknown, encodeface)
+        while True:
+            success, img = cam.read()
+            if not success:
+                break
 
-            matchidx = np.argmin(facedis)
-            matched_id = idlist[matchidx]
+            if time.time() - start_time > TIME_LIMIT:
+                break
 
-            if facedis[matchidx] < 0.45:
-                detected_id = idlist[matchidx]
+            cv2.imshow("Camera", img)
+            key = cv2.waitKey(1) & 0xFF
 
-                if already_marked(detected_id):
+            frame_count += 1
+            if frame_count % 3 == 0:  # Performance optimization
+                imgSmall = cv2.resize(img, (0, 0), None, 0.25, 0.25)
+                imgSmall = cv2.cvtColor(imgSmall, cv2.COLOR_BGR2RGB)
+
+                facecurrframe = face_recognition.face_locations(imgSmall)
+                encodeunknowncurrframe = face_recognition.face_encodings(imgSmall, facecurrframe)
+
+                for encodeface in encodeunknowncurrframe:
+                    if len(self.encodelistknown) > 0:
+                        facedis = face_recognition.face_distance(self.encodelistknown, encodeface)
+                        min_dist = np.min(facedis)
+                        matchidx = np.argmin(facedis)
+
+                        if min_dist < 0.50:
+                            cam.release()
+                            cv2.destroyAllWindows()
+                            if self.idlist[matchidx] == user_id:
+                                return "same user"
+                            else:
+                                return "duplicate face"
+
+            if key == ord('s'):
+                file_path = os.path.join(self.folder_path, f"{user_id}.png")
+                cv2.imwrite(file_path, img)
+                try:
+                    insert_user(user_id, username)
+                except sqlite3.IntegrityError:
                     cam.release()
                     cv2.destroyAllWindows()
-                    return "already_marked", detected_id
-
-                # ✅ Insert attendance
-                mark_db_attendance(detected_id)
+                    return "id_exists"
 
                 cam.release()
                 cv2.destroyAllWindows()
-                return "marked", detected_id
+                return "new"
 
-        if key == ord('q'):
-            break
+            if key == ord('q'):
+                break
 
-    cam.release()
-    cv2.destroyAllWindows()
-    return "not marked", None
+        cam.release()
+        cv2.destroyAllWindows()
+        return "no match found"
 
+    def mark_attendance(self):
+        """Public method to handle attendance verification."""
+        cam = cv2.VideoCapture(0)
+        cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
+        start_time = time.time()
+        TIME_LIMIT = 20
+        frame_count = 0
 
+        while True:
+            success, img = cam.read()
+            if not success:
+                break
+
+            if time.time() - start_time > TIME_LIMIT:
+                cam.release()
+                cv2.destroyAllWindows()
+                return "not marked", None
+
+            cv2.imshow("Camera", img)
+            key = cv2.waitKey(1) & 0xFF
+
+            frame_count += 1
+            if frame_count % 3 == 0:
+                imgSmall = cv2.resize(img, (0, 0), None, 0.25, 0.25)
+                imgSmall = cv2.cvtColor(imgSmall, cv2.COLOR_BGR2RGB)
+
+                facecurrframe = face_recognition.face_locations(imgSmall)
+                encodeunknowncurrframe = face_recognition.face_encodings(imgSmall, facecurrframe)
+
+                for encodeface in encodeunknowncurrframe:
+                    if len(self.encodelistknown) > 0:
+                        facedis = face_recognition.face_distance(self.encodelistknown, encodeface)
+                        matchidx = np.argmin(facedis)
+
+                        if facedis[matchidx] < 0.50:
+                            detected_id = self.idlist[matchidx]
+                            cam.release()
+                            cv2.destroyAllWindows()
+
+                            if already_marked(detected_id):
+                                return "already_marked", detected_id
+
+                            mark_db_attendance(detected_id)
+                            return "marked", detected_id
+
+            if key == ord('q'):
+                break
+
+        cam.release()
+        cv2.destroyAllWindows()
+        return "not marked", None
