@@ -2,9 +2,11 @@ from flask import Flask
 import cv2
 from flask import request
 from flask import render_template
-from encode import onlyregisterface, mark_attendance
 from database import init_db
 from database import get_attendance_by_date
+from encode import FaceRecognitionSystem
+
+face_system = FaceRecognitionSystem()
 
 app = Flask(__name__)
 
@@ -17,7 +19,7 @@ def index():
 @app.route("/mark_attendance", methods=['GET','POST'])
 def Mark_attendance():
     if request.method == 'GET':
-        result, user_id = mark_attendance()
+        result, user_id = face_system.mark_attendance()
         return render_template("mark_attendance.html", status=result, id=user_id)
 
     return render_template('mark_attendance.html')
@@ -27,9 +29,7 @@ def Register():
     if request.method == 'POST':
         username = request.form.get('username')
         id = request.form.get('id')
-        # onlyregisterface(username,id)
-        # return render_template('register.html',username=username)
-        result = onlyregisterface(username, id)
+        result = face_system.only_register_face(username, id)
         return render_template("register.html", username=username, status=result)
     return render_template('register.html')
 
